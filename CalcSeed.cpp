@@ -94,11 +94,14 @@ set<int> deltaCalc(int node, double sourceTrust, double info, vector<SimpleNode>
 
 
 
-void CalcSeed(double sourceTrust, double info, vector<SimpleNode> & Nodes)
+void CalcSeed(std::string netScene, double sourceTrust, double info, vector<SimpleNode> & Nodes)
 {
+    int nCount = Nodes.size();
+	const int nSources [5] = {nCount+1, nCount+2, nCount+3, nCount+4, nCount+5};
+	const int seeds[11] = {2,5,7,10,12,15,17,20,22,25,50}; 
+	std::string prefix = "/home/hatea/youtube";
 
 	/* Print imported data */
-	int nCount = Nodes.size();
 	vector<SimpleNode>::iterator pos_n, pos_n2;
 
 	const unsigned int selections = nCount/2;
@@ -269,24 +272,23 @@ void CalcSeed(double sourceTrust, double info, vector<SimpleNode> & Nodes)
     }
     
 	// Writing the seed files for greedy selection.
-	char greedy[20];
-	sprintf(greedy,"./greedy.txt");
-	ofstream greedySeeds(greedy);
-	if(!greedySeeds)
-	{
-		cerr<< "Cannot open "<<greedy << endl;
-		exit(1);
+    for(int seedcounter = 0; seedcounter < 11; ++seedcounter){
+    	char greedy_file[50];
+    	sprintf(greedy_file, "%s/t%d/greedy%20d.txt",prefix.c_str(),int(t_run*100),seeds[seedcounter]);
+		ofstream greedySeed(greedy_file);
+		if(!greedySeed)
+		{
+			cerr<< "Cannot open "<< greedy_file << endl;
+			exit(1);
+		}
+    	int temp_selections = nCount*seeds[seedcounter]/100;
+    	vector<pair<int,int> >::iterator sel;
+    	sel = selected.begin();
+		for(int i = 0; i < temp_selections; ++i, ++sel)
+			greedySeed << nSources[i%5] << '\t' << sel->second << endl;
+		greedySeed.close();
 	}
 
-
-	vector<pair<int,int> >::iterator sel;
-	int counter = 0;
-
-	for(sel = selected.begin(); sel != selected.end(); ++ sel, ++ counter)
-	{
-		greedySeeds << sel->second << endl;
-	}
-	greedySeeds.close();
 
 	return;
 }

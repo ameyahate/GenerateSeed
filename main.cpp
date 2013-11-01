@@ -26,16 +26,18 @@ using namespace std;
 #define MIN(a, b) ((a < b) ? a : b)
 #define MAX(a, b) ((a > b) ? a : b)
 
-// main use: ./main {node_file} {edge_file} {threshold} {average trust} {networkScenario}  {trust diff}
+// main use: ./main {node_file} {edge_file} {threshold} {networkScenario}
 
 int main(int argc, char *argv[])
 {
 
 	const int nCount = 1134890;
     const unsigned int selections = nCount/2;
+    string prefix = "/home/hatea/youtube";
 
 	string edgefile = "edges.txt";			//edgelist file
 	string nodefile = "nodes.txt";			//node file
+	string netScene = "homogenous";			//network scenario
 
 	double nodeTh = 0.4;             		 //Upper threshold
 
@@ -43,21 +45,27 @@ int main(int argc, char *argv[])
 	const double sourceTrust = 0.90; 	    //Source trust
 	int u,v;
 
-	if(argc==4)
+	if(argc==5)
 	{
 		nodefile = argv[1];
 		edgefile = argv[2];
 		nodeTh = atof(argv[3]);
+		netScene = argv[4];
 	}
 	else
 	{
 		cout << "Usage:\n";
-		cout << "  ./main argv[1] argv[2] argv[3]" << endl;
+		cout << "  ./main argv[1] argv[2] argv[3] argv[4]" << endl;
 		cout << "argv[1] = node file" << endl;
 		cout << "argv[2] = edge file " << endl;
 		cout << "argv[3] = threshold " << endl;
+		cout << "argv[4] = network scenario (homogenous or groupVar)" << endl;
 		exit(1);
 	}
+	
+	//Sources
+	const int nSources [5] = {nCount+1, nCount+2, nCount+3, nCount+4, nCount+5};
+	const int seeds[11] = {2,5,7,10,12,15,17,20,22,25,50}; 
 
 	// Preparing the random seed list
 	srand((unsigned)time(0));
@@ -85,17 +93,22 @@ int main(int argc, char *argv[])
 	assert(im == selections);
 	random_shuffle(rSeeds50.begin(),rSeeds50.end());
 
-	ofstream randSeed50("./random.txt");
-	if(!randSeed50)
-	{
-		cerr<< "Cannot open ./random.txt"<< endl;
-		exit(1);
+    // Write random seed files
+    for(int seedcounter = 0; seedcounter < 11; ++seedcounter){
+    	char random_file[50];
+    	sprintf(random_file, "%s/t%d/random%20d.txt",prefix.c_str(),int(nodeTh*100),seeds[seedcounter]);
+		ofstream randSeed(random_file);
+		if(!randSeed)
+		{
+			cerr<< "Cannot open "<< random_file << endl;
+			exit(1);
+		}
+    	int temp_selections = nCount*seeds[seedcounter]/100;
+		for(int i = 0; i < temp_selections; i++)
+			randSeed << nSources[i%5] << '\t' << rSeeds50[i] << endl;
+
+		randSeed.close();
 	}
-
-	for(int i = 0; i < selections; i++)
-		randSeed50 << rSeeds50[i] << endl;
-
-	randSeed50.close();
 
 	// Generating high degree seeds
 	// Reading nodes and building up node list.
@@ -159,21 +172,25 @@ int main(int argc, char *argv[])
 		}
 	}
 	
-	// Writing the seed files for highest degree
-	ofstream highDegreeSeed50("./highDegree.txt");
-	if(!highDegreeSeed50)
-	{
-		cerr<< "Cannot open ./highDegree.txt"<< endl;
-		exit(1);
+	// Writing the seed files for highest degree	
+    for(int seedcounter = 0; seedcounter < 11; ++seedcounter){
+    	char highDegree_file[50];
+    	sprintf(highDegree_file, "%s/t%d/highDegree%20d.txt",prefix.c_str(),int(nodeTh*100),seeds[seedcounter]);
+		ofstream highDegreeSeed(highDegree_file);
+		if(!highDegreeSeed)
+		{
+			cerr<< "Cannot open "<< highDegree_file << endl;
+			exit(1);
+		}
+    	int temp_selections = nCount*seeds[seedcounter]/100;
+    	 RevDegItr = NodeDeg.rbegin();
+		for(int i = 0 ; i < temp_selections; ++i, ++RevDegItr)
+			highDegreeSeed << nSources[i%5] << '\t' << RevDegItr->second << endl;
+		highDegreeSeed.close();
 	}
-	for(RevDegItr = NodeDeg.rbegin(); RevDegItr != NodeDeg.rend(); ++RevDegItr)
-	{
-		highDegreeSeed50 << RevDegItr->second << endl;
-	}
-	highDegreeSeed50.close();
 
 //	cout << "Calling CalcSeed..."<< endl;
-	CalcSeed(sourceTrust, sourceVal, Nodes);
+	CalcSeed(netScene, sourceTrust, sourceVal, Nodes);
 
 	t2 = time(NULL); //get time at the end of process
 	printf("[t:%f] Time executed = %d min %d sec\n", Nodes.at(0).getNlb(), (int)(t2-t1)/60, (int)(t2-t1)%60);
