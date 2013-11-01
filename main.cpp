@@ -31,44 +31,33 @@ using namespace std;
 int main(int argc, char *argv[])
 {
 
-	const int nCount = 100000;
-	const int p05 = nCount/20;
-	const int p10 = nCount/10;
-	const int p20 = nCount/5;
+	const int nCount = 1134890;
+    const unsigned int selections = nCount/2;
 
-	const int seed05 = p05/5;
-	const int seed10 = p10/5;
-	const int seed20 = p20/5;
-
-	char * edgefile = "edges.txt";			//edgelist file
-	char * nodefile = "nodes.txt";			//node file
+	string edgefile = "edges.txt";			//edgelist file
+	string nodefile = "nodes.txt";			//node file
 
 	double nodeTh = 0.4;             		 //Upper threshold
-	char * thNo = "0";
 
 	const double sourceVal = 0.95;			//Source information value
 	const double sourceTrust = 0.90; 	    //Source trust
 	int u,v;
 
-	if(argc==5)
+	if(argc==4)
 	{
 		nodefile = argv[1];
 		edgefile = argv[2];
 		nodeTh = atof(argv[3]);
-		thNo = argv[4];
 	}
 	else
 	{
 		cout << "Usage:\n";
-		cout << "  ./main argv[1]... argv[6]" << endl;
+		cout << "  ./main argv[1] argv[2] argv[3]" << endl;
 		cout << "argv[1] = node file" << endl;
 		cout << "argv[2] = edge file " << endl;
 		cout << "argv[3] = threshold " << endl;
-		cout << "argv[4] = threshold number" << endl;
 		exit(1);
 	}
-
-	const int nSources [5] = {nCount+1, nCount+2, nCount+3, nCount+4, nCount+5};
 
 	// Preparing the random seed list
 	srand((unsigned)time(0));
@@ -77,52 +66,38 @@ int main(int argc, char *argv[])
 	time_t t1,t2;
 	t1 = time(NULL);  //get time at the beginning of process
 
-
-
-	//Selecting 5% seeds from rSeed10
-	vector<int> rSeeds05;
+	//Selecting 50% seeds from rSeed10
+	vector<int> rSeeds50;
 	int im = 0;
 	int in;
 
-	for (in = 0; in < nCount && im < p05; ++in)
+	for (in = 0; in < nCount && im < selections; ++in)
 	{
 	  int rn = nCount - in;
-	  int rm = p05 - im;
+	  int rm = selections - im;
 	  if (rand() % rn < rm)
 	  { /* Take it */
-	    rSeeds05.push_back( in + 1);
+	    rSeeds50.push_back( in + 1);
 	    ++im;
 	  }
 	}
 
-	assert(im == p05);
-	random_shuffle(rSeeds05.begin(),rSeeds05.end());
+	assert(im == selections);
+	random_shuffle(rSeeds50.begin(),rSeeds50.end());
 
-	//	cout<< "Test1" << endl;
-
-//	vector<int>::iterator pos;
-//	for(pos = rSeeds05.begin(); pos!= rSeeds05.end(); ++pos)
-//	{
-//		cout<< *pos <<"\t";
-//	}
-//	cout << endl;
-	if(atoi(thNo) == 0)
+	ofstream randSeed50("./random.txt");
+	if(!randSeed50)
 	{
-		ofstream randSeed05("./random.txt");
-		if(!randSeed05)
-		{
-			cerr<< "Cannot open ./random.txt"<< endl;
-			exit(1);
-		}
-
-		for(int i = 0; i < p05; i++)
-			randSeed05 << nSources[(int) i/seed05] << '\t' << rSeeds05[i] << endl;
-
-		randSeed05.close();
+		cerr<< "Cannot open ./random.txt"<< endl;
+		exit(1);
 	}
 
-	// Generating high degree seeds
+	for(int i = 0; i < selections; i++)
+		randSeed50 << rSeeds50[i] << endl;
 
+	randSeed50.close();
+
+	// Generating high degree seeds
 	// Reading nodes and building up node list.
 
 	vector<SimpleNode> Nodes;
@@ -133,16 +108,10 @@ int main(int argc, char *argv[])
 		cerr << "Error opening " << nodefile << endl;
 		exit(1);
 	}
-
 	input1 >> u >> v;
 	while(!input1.eof())
 	{
-		int group;
-		if(v < 26)
-			group = 1;
-		else
-			group = 2;
-		SimpleNode n( u, group, nodeTh);
+		SimpleNode n( u, v, nodeTh);
 		Nodes.push_back(n);
 		input1 >> u >> v;
 	}
@@ -169,59 +138,42 @@ int main(int argc, char *argv[])
 	input2.close();
 
 //	cout << "Files read" << endl;
-	if(atoi(thNo) ==0)
+	multimap<double, int> NodeDeg;			// Storing <degree, nodeId>
+	multimap<double, int>::iterator DegItr;
+	multimap<double, int>::reverse_iterator RevDegItr;
+
+	vector<SimpleNode>::iterator NodeItr;
+	NodeItr = Nodes.begin();
+
+	for(int counter = 0; counter < selections; ++NodeItr, ++counter)
+		NodeDeg.insert(make_pair(NodeItr->getDegree(), NodeItr->getNid()));
+
+	DegItr = NodeDeg.begin();
+	for(;NodeItr != Nodes.end(); ++NodeItr)
 	{
-		multimap<double, int> NodeDeg;			// Storing <degree, nodeId>
-		multimap<double, int>::iterator DegItr;
-
-		vector<SimpleNode>::iterator NodeItr;
-		NodeItr = Nodes.begin();
-
-		for(int counter = 0; counter < p05; ++NodeItr, ++counter)
+		if(NodeItr->getDegree() > DegItr->first)
+		{
+			NodeDeg.erase(DegItr);
 			NodeDeg.insert(make_pair(NodeItr->getDegree(), NodeItr->getNid()));
-
-		DegItr = NodeDeg.begin();
-		for(;NodeItr != Nodes.end(); ++NodeItr)
-		{
-			if(NodeItr->getDegree() > DegItr->first)
-			{
-				NodeDeg.erase(DegItr);
-				NodeDeg.insert(make_pair(NodeItr->getDegree(), NodeItr->getNid()));
-				DegItr = NodeDeg.begin();
-			}
+			DegItr = NodeDeg.begin();
 		}
-
-
-		// Writing the seed files for highest degree
-		ofstream highDegreeSeed05("./highDegree.txt");
-		if(!highDegreeSeed05)
-		{
-			cerr<< "Cannot open ./highDegree.txt"<< endl;
-			exit(1);
-		}
-
-		int counter = 0;
-
-	//	for(DegItr = NodeDeg.begin(); DegItr != NodeDeg.end(); ++DegItr)
-	//		cout<< DegItr->first << "=>" << DegItr->second << endl;
-
-		for(DegItr = NodeDeg.begin(); DegItr != NodeDeg.end(); ++counter, ++DegItr)
-		{
-			highDegreeSeed05 << nSources[counter%5] << '\t' << DegItr->second << endl;
-		}
-
-		highDegreeSeed05.close();
-
-		assert(DegItr == NodeDeg.end());
-//	cout << "High degree written count:"<< counter << endl;
-//	cout << "Size of high degree multimap:" <<NodeDeg.size()<<endl;
 	}
-
-
+	
+	// Writing the seed files for highest degree
+	ofstream highDegreeSeed50("./highDegree.txt");
+	if(!highDegreeSeed50)
+	{
+		cerr<< "Cannot open ./highDegree.txt"<< endl;
+		exit(1);
+	}
+	for(RevDegItr = NodeDeg.rbegin(); RevDegItr != NodeDeg.rend(); ++RevDegItr)
+	{
+		highDegreeSeed50 << RevDegItr->second << endl;
+	}
+	highDegreeSeed50.close();
 
 //	cout << "Calling CalcSeed..."<< endl;
-	CalcSeed(thNo, sourceTrust, sourceVal, Nodes);
-
+	CalcSeed(sourceTrust, sourceVal, Nodes);
 
 	t2 = time(NULL); //get time at the end of process
 	printf("[t:%f] Time executed = %d min %d sec\n", Nodes.at(0).getNlb(), (int)(t2-t1)/60, (int)(t2-t1)%60);

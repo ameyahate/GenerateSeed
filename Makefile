@@ -16,3 +16,6 @@ SimpleNode.o: SimpleNode.h SimpleNode.cpp
 
 CalcSeed.o: CalcSeed.h CalcSeed.cpp
 	$(CXX) $(CXXFLAGS) -c CalcSeed.cpp
+
+clean:
+	rm -rf *o genSeeds

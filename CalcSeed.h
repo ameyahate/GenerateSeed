@@ -22,7 +22,7 @@
 
 
 
-void CalcSeed(char * thNo, double sourceTrust, double info, std::vector<SimpleNode>&);
+void CalcSeed(double sourceTrust, double info, std::vector<SimpleNode>&);
 std::set<int> deltaCalc(int node, int nCount, double sourceTrust, double info, std::vector<SimpleNode>& Nodes);
 
 

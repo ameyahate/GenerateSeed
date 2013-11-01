@@ -54,7 +54,6 @@ set<int> deltaCalc(int node, double sourceTrust, double info, vector<SimpleNode>
 			minq.push(make_pair(Nodes.at(node -1).getInfo() + INFO(nbrTrust),nbrNode));
 	}
 
-
 	while(!minq.empty())
 	{
 		double t_info = minq.top().first;
@@ -77,12 +76,6 @@ set<int> deltaCalc(int node, double sourceTrust, double info, vector<SimpleNode>
 			minq.pop();
 	}
 
-	//Sanity check: check information of neighboring nodes.
-//	for(nbr = Nodes.at(node - 1).neighborList.begin(); nbr!= Nodes.at(node - 1).neighborList.end(); ++nbr)
-//		cout << "[Node: "<< nbr->first << ", Information: " <<Nodes.at(nbr->first -1).getInfo() <<" | " << REVINFO(Nodes.at(nbr->first -1).getInfo()) << "]";
-//	cout << endl;
-
-
 	for(pos_n=Nodes.begin(); pos_n != Nodes.end(); ++pos_n)
 	{
 		double finalInfo = REVINFO(pos_n->getInfo());
@@ -101,84 +94,37 @@ set<int> deltaCalc(int node, double sourceTrust, double info, vector<SimpleNode>
 
 
 
-void CalcSeed(char* thNo, double sourceTrust, double info, vector<SimpleNode> & Nodes)
+void CalcSeed(double sourceTrust, double info, vector<SimpleNode> & Nodes)
 {
 
 	/* Print imported data */
-	int nCount = 100000;
+	int nCount = Nodes.size();
 	vector<SimpleNode>::iterator pos_n, pos_n2;
 
-//	for(pos_n = Nodes.begin(); pos_n !=Nodes.end(); ++pos_n)
-//		pos_n->printNode();
-//	cout<< "Node List Size:" << Nodes.size()<< endl;
-//	exit(0);
+	const unsigned int selections = nCount/2;
 
-
-	const int p05 = nCount/20;
-	const int p10 = nCount/10;
-	const int p20 = nCount/5;
-
-	const int seed05 = p05/5;
-	const int seed10 = p10/5;
-	const int seed20 = p20/5;
-//	const double e = 2.71828182845904523536;
-
-	const int nSources [5] = {nCount+1, nCount+2, nCount+3, nCount+4, nCount+5};
 	double t_run = Nodes.at(0).getNlb();
 	double threshold = 2000+ (t_run-0.2)*8000/(0.35);
-
-	/*******************************************************************************/
-	//	Building the deltaS and containsV list (Using DFS)
-	/*******************************************************************************/
-
-//  Printing containsV
-
-//	for(pos_n=Nodes.begin(); pos_n!=Nodes.end(); ++pos_n)
-//	{
-//		cout<< "Node " << pos_n->getNid() << ":";
-//		map<int, int> ::iterator pos_d;
-//		for(pos_d = pos_n->containsV.begin(); pos_d != pos_n->containsV.end(); ++pos_d)
-//		{
-//			cout<< "("<< pos_d->first << "," << pos_d->second <<") ";
-//		}
-//		cout<< endl;
-//	}
-
-
-
-
-
-	/*******************************************************************************/
-	//	Making the list of selections
-	/*******************************************************************************/
-
-//	cout<<"Making seed selection..."<< endl;
-
-	unsigned int selections = p05;
-//	for(pos_s = Sources.begin(); pos_s != Sources.end(); ++pos_s)
-//		selections += pos_s->second.getNseed();
 
 	vector< pair<int,int> > selected;	//Vector of Selected Node.
 	set<int>::iterator temp, setItr;
 
 	//Building the priority queue of pair<N,I>: N = Nodes converted, I = Node Id
 	priority_queue< pair<unsigned int,unsigned int> > que;
+	//Priority queue for finding highest degree nodes once no more nodes
+	//can be selected on the basis of influence. pair<D,I>: D = Degree, I = Node Id 
 	priority_queue< pair<double, unsigned int> > degreeQ;
 
 	set<int> maxSet;
 	unsigned int maxNode;
 
-//	for(pos_n = Nodes.begin(); pos_n != Nodes.end(); ++pos_n)
-//	{
-//		pos_n->uncover();
-//		pos_n->unselect();
-//	}
 	bool deltaZero = false, switchop = true, listbuild = false, quebuild = false;
 	if(t_run < 0.2)
 	{
 		threshold = 1000;
 		switchop = false;
 	}
+
 	//Building PQ for choosing best node without using data-structure
 	if(!switchop)
 	for(pos_n = Nodes.begin(); pos_n != Nodes.end(); ++pos_n)
@@ -186,12 +132,12 @@ void CalcSeed(char* thNo, double sourceTrust, double info, vector<SimpleNode> & 
 		set<int> tempSet = deltaCalc(pos_n->getNid(),sourceTrust,info, Nodes);
 		que.push(make_pair(pos_n->deltaS,pos_n->getNid()));
 	}
-
-
-
+	
 	while(selected.size() != selections)
 	{
+	    // If Max Delta is not zero and data structure is not created
 		if(!deltaZero && !switchop)
+		// If Max Delta is not zero and data structure is created
 		{
 			bool found = false;
 			while(!found)
@@ -232,7 +178,6 @@ void CalcSeed(char* thNo, double sourceTrust, double info, vector<SimpleNode> & 
 			}
 //			cout<<"Node selected: "<< maxNode << "| deltaS: " << maxDelta<< endl;
 		}
-
 		else if( !deltaZero && switchop)
 		{
 			//Build List for remaining nodes
@@ -299,28 +244,9 @@ void CalcSeed(char* thNo, double sourceTrust, double info, vector<SimpleNode> & 
 						pos_n->cover();
 					}
 				}
-//				if(selected.size()%100 ==0)
-//				{
-//					cout<<"Node selected: "<< maxNode << "| deltaS: " << maxDelta<< endl;
-//					cout<<"testcounter value :" << testcounter<<endl;
-//				}
 			}	
 		}
-
-//	We dont care about the different sources right now
-//		Sources[maxSource].decSeedLeft();
-//		if(Sources[maxSource].getNseedLeft() == 0)
-//		{
-//			for(pos_n=Nodes.begin(); pos_n!=Nodes.end(); ++pos_n)
-//				for(temp = pos_n->deltaS.begin(); temp != pos_n->deltaS.end(); ++temp)
-//					if(temp->first == maxSource)
-//					{
-//						pos_n->deltaS.erase(temp);
-//						break;
-//					}
-//		}
-
-//	Now MaxDelta is zero so we chose rest of the seeds according to highest degree criteria 
+        //	Now MaxDelta is zero so we chose rest of the seeds according to highest degree criteria 
 		else
 		{	
 			if(!quebuild)
@@ -339,44 +265,14 @@ void CalcSeed(char* thNo, double sourceTrust, double info, vector<SimpleNode> & 
 			degreeQ.pop();
 			Nodes.at(maxNode.second -1).select();
 			selected.push_back(make_pair(0,maxNode.second));
-
-//			if(selected.size()%100 ==0)
-//				cout<<"Node selected: "<< maxNode << "| Degree: " << maxDegree<< endl;
 		}
-
-
-//		if(selected.size()%1000 ==0)
-//			cout << "Selections made: " << selected.size() << endl;
-
-	}
-
-
-	//Print Result
-	//Sanity check for Source seeds left: should be all zero
-//	for(pos_s = Sources.begin(); pos_s != Sources.end(); ++pos_s)
-//	{
-//		cout<< "Source: "<< pos_s->first << ", Seed left: "<< pos_s->second.getNseedLeft()<< endl;
-//	}
-
-//	//The Selected list:
-//	ofstream calcseed;
-//	calcseed.open("calcseed.txt");
-//
-//	vector<pair<int,int> >::iterator sel;
-//	for(sel = selected.begin(); sel != selected.end(); ++ sel)
-//	{
-//		calcseed<< sel->first<< '\t' <<sel->second <<endl;
-////		cout<< "Source: "<< sel->first << " Node: " << sel->second<< endl;
-//	}
-//
-//	calcseed.close();
-
+    }
+    
 	// Writing the seed files for greedy selection.
-
 	char greedy[20];
-	sprintf(greedy,"./greedy%s.txt",thNo);
-	ofstream greedySeed05(greedy);
-	if(!greedySeed05)
+	sprintf(greedy,"./greedy.txt");
+	ofstream greedySeeds(greedy);
+	if(!greedySeeds)
 	{
 		cerr<< "Cannot open "<<greedy << endl;
 		exit(1);
@@ -388,11 +284,9 @@ void CalcSeed(char* thNo, double sourceTrust, double info, vector<SimpleNode> & 
 
 	for(sel = selected.begin(); sel != selected.end(); ++ sel, ++ counter)
 	{
-		greedySeed05 << nSources[counter%5] << '\t' << sel->second << endl;
+		greedySeeds << sel->second << endl;
 	}
-	greedySeed05.close();
+	greedySeeds.close();
 
-//	cout<<"Seeds calculated. Returning calcseed"<< endl;
-//	return "calcseed.txt";
 	return;
 }
